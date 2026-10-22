@@ -156,7 +156,7 @@ class Setup extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-              child: Text('Deux autorisations pour commencer', style: Theme.of(context).textTheme.titleMedium),
+              child: Text('Trois autorisations pour commencer', style: Theme.of(context).textTheme.titleMedium),
             ),
             step(
               guard.usageAccess,
@@ -172,7 +172,14 @@ class Setup extends StatelessWidget {
               "Pour voir quelle application s'ouvre et la mettre en pause. Il ne lit jamais l'écran.",
               'openGuard',
             ),
-            if (!guard.serviceOn)
+            step(
+              guard.notifications,
+              Icons.notifications_paused,
+              'Accès aux notifications',
+              "Pour mettre de côté les notifications pendant une pause : elles reviennent à la fin. Il ne lit jamais leur contenu.",
+              'openNotifications',
+            ),
+            if (!guard.serviceOn || !guard.notifications)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: TextButton.icon(

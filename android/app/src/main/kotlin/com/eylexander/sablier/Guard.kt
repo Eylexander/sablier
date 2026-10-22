@@ -21,6 +21,8 @@ class Guard : AccessibilityService() {
         if (pkg == last) return
         last = pkg
         handler.removeCallbacks(check)
+        // Already paused: cover it at once, the usage stats aren't needed for that.
+        Rules.paused(this, pkg, System.currentTimeMillis()).firstOrNull()?.let { return pause(it.first) }
         handler.postDelayed(check, 300) // let the usage stats record the new activity first
     }
 
@@ -52,9 +54,12 @@ class Guard : AccessibilityService() {
         if (next != Long.MAX_VALUE) handler.postDelayed(check, maxOf(next, 1000))
     }
 
-    private fun pause(rule: Rule) = startActivity(
-        Intent(this, MainActivity::class.java)
-            .putExtra(MainActivity.PAUSED, rule.id)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-    )
+    private fun pause(rule: Rule) {
+        Hush.instance?.hushAll()
+        startActivity(
+            Intent(this, MainActivity::class.java)
+                .putExtra(MainActivity.PAUSED, rule.id)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
 }

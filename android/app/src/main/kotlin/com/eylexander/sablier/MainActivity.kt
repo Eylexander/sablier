@@ -1,6 +1,8 @@
 package com.eylexander.sablier
 
 import android.app.AppOpsManager
+import android.app.NotificationManager
+import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -34,9 +36,12 @@ class MainActivity : FlutterActivity() {
                     "status" -> result.success(status())
                     "apps" -> result.success(apps())
                     "icon" -> result.success(icon(call.arguments as String))
-                    "access" -> result.success(mapOf("usage" to usageAccess(), "guard" to guardOn()))
+                    "access" -> result.success(
+                        mapOf("usage" to usageAccess(), "guard" to guardOn(), "notifications" to notificationsOn()),
+                    )
                     "openUsage" -> settings(Settings.ACTION_USAGE_ACCESS_SETTINGS, result)
                     "openGuard" -> settings(Settings.ACTION_ACCESSIBILITY_SETTINGS, result)
+                    "openNotifications" -> settings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, result)
                     "openAppInfo" -> settings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, result, Uri.parse("package:$packageName"))
                     "takePaused" -> {
                         result.success(intent.getStringExtra(PAUSED))
@@ -93,6 +98,9 @@ class MainActivity : FlutterActivity() {
 
     private fun guardOn() = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
         ?.contains("$packageName/") == true
+
+    private fun notificationsOn() = getSystemService(NotificationManager::class.java)
+        .isNotificationListenerAccessGranted(ComponentName(this, Hush::class.java))
 
     private fun settings(action: String, result: MethodChannel.Result, data: Uri? = null) {
         startActivity(Intent(action).setData(data))

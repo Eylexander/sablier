@@ -102,13 +102,13 @@ const social = [
 class Guard extends ChangeNotifier {
   List<Rule> rules = [];
   Map<String, Status> status = {};
-  bool usageAccess = false, serviceOn = false;
+  bool usageAccess = false, serviceOn = false, notifications = false;
 
   /// Launchable apps as (package, label), by label.
   List<(String, String)> apps = [];
   final _icons = <String, Future<Uint8List?>>{};
 
-  bool get ready => usageAccess && serviceOn;
+  bool get ready => usageAccess && serviceOn && notifications;
   String label(String pkg) => apps.firstWhere((a) => a.$1 == pkg, orElse: () => (pkg, pkg)).$2;
   Future<Uint8List?> icon(String pkg) => _icons[pkg] ??= channel.invokeMethod<Uint8List>('icon', pkg);
 
@@ -137,6 +137,7 @@ class Guard extends ChangeNotifier {
     final access = await channel.invokeMapMethod<String, bool>('access') ?? {};
     usageAccess = access['usage'] ?? false;
     serviceOn = access['guard'] ?? false;
+    notifications = access['notifications'] ?? false;
     status = usageAccess
         ? {for (final m in await channel.invokeListMethod<Map>('status') ?? []) m['id']: Status(m)}
         : {};

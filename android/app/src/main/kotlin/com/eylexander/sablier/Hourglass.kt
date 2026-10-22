@@ -94,6 +94,11 @@ object Rules {
         return Status(used, if (until > 0) 0 else maxOf(0, rule.budget - used), open, until, sessions)
     }
 
+    /** The rules holding [pkg] that are paused at [now], with the end of their pause (as [status] stored it). */
+    fun paused(c: Context, pkg: String, now: Long) = load(c).filter { it.on && pkg in it.apps }
+        .map { it to prefs(c).getLong("until.${it.id}", 0) }
+        .filter { it.second > now }
+
     private fun events(c: Context, from: Long, now: Long) = sequence {
         val events = c.getSystemService(UsageStatsManager::class.java).queryEvents(from, now)
         val e = UsageEvents.Event()

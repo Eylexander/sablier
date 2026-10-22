@@ -18,11 +18,12 @@ flutter build apk --debug --target-platform android-x64      # emulator
 flutter build apk --release --target-platform android-arm64  # → build/app/outputs/flutter-apk/app-release.apk
 ```
 
-Grant both permissions without the UI (the debug package is `com.eylexander.sablier.debug`):
+Grant the three permissions without the UI (the debug package is `com.eylexander.sablier.debug`):
 
 ```sh
 adb shell appops set com.eylexander.sablier GET_USAGE_STATS allow
 adb shell settings put secure enabled_accessibility_services com.eylexander.sablier/com.eylexander.sablier.Guard
+adb shell cmd notification allow_listener com.eylexander.sablier/com.eylexander.sablier.Hush
 adb shell appops set com.eylexander.sablier ACCESS_RESTRICTED_SETTINGS allow   # if the toggle is greyed out
 ```
 
@@ -60,11 +61,15 @@ The enforcement is native (it must run without the Flutter UI); Flutter is only 
   `canRetrieveWindowContent=false`. On each change of front package it checks the rules 300 ms later (so the usage
   event is recorded), then again when the time left runs out (a toast one minute before). A spent rule whose app is
   on screen opens `MainActivity` with the `paused` extra. Accessibility services may start activities from the
-  background; pressing Home first would trigger the 5 s app-switch delay, so it doesn't.
+  background; pressing Home first would trigger the 5 s app-switch delay, so it doesn't. When the rule is already
+  paused (`until.<id>` stored), it covers the app at once, without the 300 ms wait.
+- **Hush** (`Hush.kt`, a NotificationListenerService): while a rule is paused, snoozes its apps' notifications until
+  `until`, when Android posts them again. Tapping one would open the app straight into the message (Instagram marks
+  it read) before Guard can cover it. Looks only at the package, never the content.
 - **Channel** `sablier/guard` (`MainActivity.kt`): `rules`, `setRules`, `status` (used, left, until, sessions per
   rule), `apps` (launchable apps; needs the MAIN/LAUNCHER `<queries>`), `icon` (96 px PNG), `access`, `openUsage`,
-  `openGuard`, `openAppInfo`, `takePaused` (cold start), `home`; and `paused` from Kotlin (`onNewIntent`). The
-  activity is `singleTask` so the pause screen reuses the running engine.
+  `openGuard`, `openNotifications`, `openAppInfo`, `takePaused` (cold start), `home`; and `paused` from Kotlin
+  (`onNewIntent`). The activity is `singleTask` so the pause screen reuses the running engine.
 - **UI**: `main.dart` (home: permission card, rule cards, refresh every 5 s while visible), `rule.dart` (editor),
   `pause.dart` (countdown; back and "Fermer" go to the launcher, not back to the app), `widgets.dart` (`Timeline`:
   the window as a strip, time used drawn as sand that slides out on the left). Material 3 from the wallpaper
