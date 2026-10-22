@@ -1,0 +1,23 @@
+name: Release APK
+
+# Push a tag like v1.2.0 to build the APK and publish it as a GitHub release; the F-Droid repo (Eylexander/fdroid)
+# picks it up. "Run workflow" on the Actions tab builds it without publishing (the APK is attached to the run).
+# The build is shared with the other apps of the F-Droid repo: Eylexander/fdroid/.github/workflows/flutter-apk.yml.
+# Keep this file's name: the versionCode is its run number.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    uses: Eylexander/fdroid/.github/workflows/flutter-apk.yml@main
+    with:
+      apk-name: sablier
+      flutter-version: "3.47.7"
+    secrets:
+      RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+      RELEASE_KEYSTORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASS }}

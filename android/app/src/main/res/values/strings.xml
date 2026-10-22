@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guard_description">Sablier voit quelle application passe au premier plan pour la mettre en pause quand son temps est écoulé. Il ne lit jamais le contenu de l\'écran et rien ne quitte le téléphone.</string>
+</resources>

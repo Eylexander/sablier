@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An hourglass with sand in both bulbs, in single-weight rounded strokes so it also works as the monochrome layer
+     of themed icons. Same paths as tool/icon.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineJoin="round"
+        android:strokeLineCap="round"
+        android:pathData="M36,30 H72 M36,78 H72 M41,30 C41,45 51,48 51,54 C51,60 41,63 41,78 M67,30 C67,45 57,48 57,54 C57,60 67,63 67,78" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineCap="round"
+        android:pathData="M48,44 H60 M45,75 Q54,66 63,75" />
+</vector>
