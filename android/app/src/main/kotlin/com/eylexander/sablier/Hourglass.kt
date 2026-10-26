@@ -11,6 +11,9 @@ data class Rule(val id: String, val name: String, val apps: Set<String>, val bud
 /** A stretch of time one of a rule's apps was on screen, in epoch ms. */
 data class Session(val start: Long, val end: Long)
 
+/** The app in front ([pkg], null while the screen is off) after the usage events up to [seen]. */
+class Front(val pkg: String?, val seen: Long, val changed: Boolean)
+
 class Status(val used: Long, val left: Long, val open: Boolean, val until: Long, val sessions: List<Session>) {
     val blocked get() = until > 0
 }
@@ -61,6 +64,25 @@ object Hourglass {
         close(now)
         return out
     }
+
+    /**
+     * Follows the app in front through the usage events (type, package, time; in time order) newer than [seen], from
+     * [front]. Changed if another app came to the front, or the screen went off (the app may need covering again).
+     */
+    fun front(events: Sequence<Triple<Int, String, Long>>, front: String?, seen: Long): Front {
+        var pkg = front
+        var last = seen
+        var changed = false
+        for ((type, p, t) in events) {
+            if (t <= last) continue // already handled (polls overlap)
+            last = t
+            when (type) {
+                UsageEvents.Event.ACTIVITY_RESUMED -> if (p != pkg) { pkg = p; changed = true }
+                UsageEvents.Event.SCREEN_NON_INTERACTIVE -> { pkg = null; changed = true }
+            }
+        }
+        return Front(pkg, last, changed)
+    }
 }
 
 /** Rules (written by the Flutter side as JSON) and their live status from Android's usage stats. */
@@ -99,7 +121,7 @@ object Rules {
         .map { it to prefs(c).getLong("until.${it.id}", 0) }
         .filter { it.second > now }
 
-    private fun events(c: Context, from: Long, now: Long) = sequence {
+    fun events(c: Context, from: Long, now: Long) = sequence {
         val events = c.getSystemService(UsageStatsManager::class.java).queryEvents(from, now)
         val e = UsageEvents.Event()
         while (events.getNextEvent(e)) yield(Triple(e.eventType, e.packageName, e.timeStamp))

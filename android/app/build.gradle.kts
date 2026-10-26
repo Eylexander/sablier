@@ -16,7 +16,7 @@ android {
 
     defaultConfig {
         applicationId = "com.eylexander.sablier"
-        // Android 10+: ACTIVITY_RESUMED/PAUSED usage events, and the accessibility service may open the pause screen
+        // Android 10+: ACTIVITY_RESUMED/PAUSED usage events, and "display over other apps" may open the pause screen
         // from the background. The launcher icon is an adaptive vector only (no PNG mipmaps).
         minSdk = 29
         targetSdk = flutter.targetSdkVersion

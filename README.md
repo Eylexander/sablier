@@ -7,6 +7,6 @@ défiler sans fin. Une alternative libre à la limite « par heure » d'AppBlock
 - Fenêtre glissante : chaque minute utilisée revient une période plus tard, comme le sable.
 - Un message une minute avant la fin, puis un écran de pause avec le compte à rebours.
 - Une règle en pause ne peut pas être assouplie avant la fin de la pause.
-- Pas de compte, pas de réseau, rien ne quitte le téléphone. Le service d'accessibilité ne lit jamais l'écran.
+- Pas de compte, pas de réseau, rien ne quitte le téléphone. Sablier ne lit jamais l'écran ni les notifications.
 
 Distribuée par le dépôt F-Droid https://eylexander.github.io/fdroid/repo. Détails techniques : [CLAUDE.md](CLAUDE.md).

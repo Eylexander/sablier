@@ -43,4 +43,26 @@ class HourglassTest {
         val s = Hourglass.sessions(events, insta, 0, 31 * min)
         assertEquals(listOf(Session(0, 2 * min), Session(10 * min, 12 * min), Session(20 * min, 21 * min), Session(30 * min, 31 * min)), s)
     }
+
+    @Test
+    fun frontFollowsTheEvents() {
+        val events = sequenceOf(
+            Triple(ACTIVITY_RESUMED, "com.whatsapp", 1000L), // seen by the last poll
+            Triple(ACTIVITY_RESUMED, "com.instagram.android", 3000L),
+            Triple(ACTIVITY_PAUSED, "com.instagram.android", 4000L),
+        )
+        val f = Hourglass.front(events, "com.whatsapp", 2000)
+        assertEquals("com.instagram.android", f.pkg)
+        assertEquals(4000L, f.seen)
+        assertEquals(true, f.changed)
+        assertEquals(false, Hourglass.front(events, "com.instagram.android", 2000).changed) // same app
+        assertEquals(false, Hourglass.front(events, "com.whatsapp", 4000).changed) // nothing new
+        // Screen off and back on the same app: look again, it may be paused now.
+        val again = Hourglass.front(
+            sequenceOf(Triple(SCREEN_NON_INTERACTIVE, "android", 5000L), Triple(ACTIVITY_RESUMED, "com.instagram.android", 9000L)),
+            "com.instagram.android", 4000,
+        )
+        assertEquals("com.instagram.android", again.pkg)
+        assertEquals(true, again.changed)
+    }
 }

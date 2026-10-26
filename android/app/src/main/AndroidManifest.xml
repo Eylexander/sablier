@@ -2,6 +2,8 @@
     xmlns:tools="http://schemas.android.com/tools">
     <!-- Time spent in each app (Hourglass.kt). Granted in Settings > Usage access, not at runtime. -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions"/>
+    <!-- "Display over other apps": lets Guard open the pause screen from the background. Granted in Settings. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <!-- The pause screen's "Minuteur" buttons start a timer in the clock app (MainActivity.open) -->
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>
     <application
@@ -31,18 +33,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- Sees which app comes to the front and shows the pause screen (Guard.kt) -->
-        <service
-            android:name=".Guard"
-            android:exported="true"
-            android:label="${appName}"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService"/>
-            </intent-filter>
-            <meta-data android:name="android.accessibilityservice" android:resource="@xml/guard"/>
-        </service>
-        <!-- Snoozes the notifications of paused apps until the pause ends (Hush.kt) -->
+        <!-- Runs Guard, and snoozes the notifications of paused apps until the pause ends (Hush.kt) -->
         <service
             android:name=".Hush"
             android:exported="true"

@@ -22,13 +22,10 @@ Grant the three permissions without the UI (the debug package is `com.eylexander
 
 ```sh
 adb shell appops set com.eylexander.sablier GET_USAGE_STATS allow
-adb shell settings put secure enabled_accessibility_services com.eylexander.sablier/com.eylexander.sablier.Guard
+adb shell appops set com.eylexander.sablier SYSTEM_ALERT_WINDOW allow
 adb shell cmd notification allow_listener com.eylexander.sablier/com.eylexander.sablier.Hush
 adb shell appops set com.eylexander.sablier ACCESS_RESTRICTED_SETTINGS allow   # if the toggle is greyed out
 ```
-
-Careful: `settings put` replaces the list of enabled accessibility services; append to the current value if others
-are on.
 
 ## Releasing (same scheme as LLLearner, Re-TCAT and Audio Cutter)
 
@@ -57,18 +54,21 @@ The enforcement is native (it must run without the Flutter UI); Flutter is only 
 - **Pause**: once the budget is spent, `Rules.status` stores `until.<id>` = the first moment a whole minute is back
   (`freeAt`), so the app doesn't come back a few seconds at a time. While paused, the UI won't edit, delete or switch
   off the rule (self-control: loosening a rule must wait for the pause to end).
-- **Guard** (`Guard.kt`, an AccessibilityService, `res/xml/guard.xml`): window-state events only,
-  `canRetrieveWindowContent=false`. On each change of front package it checks the rules 300 ms later (so the usage
-  event is recorded), then again when the time left runs out (a toast one minute before). A spent rule whose app is
-  on screen opens `MainActivity` with the `paused` extra. Accessibility services may start activities from the
-  background; pressing Home first would trigger the 5 s app-switch delay, so it doesn't. When the rule is already
-  paused (`until.<id>` stored), it covers the app at once, without the 300 ms wait.
-- **Hush** (`Hush.kt`, a NotificationListenerService): while a rule is paused, snoozes its apps' notifications until
-  `until`, when Android posts them again. Tapping one would open the app straight into the message (Instagram marks
-  it read) before Guard can cover it. Looks only at the package, never the content.
+- **Guard** (`Guard.kt`, a plain class that Hush runs): every second while the screen is on, reads the usage events
+  since the last poll (`Hourglass.front`, a few seconds of overlap) to follow the front app. **No accessibility
+  service**: with one on, Instagram scrolls noticeably slower (v1.0–1.2 had one; users uninstalled over it). On each
+  change of front app (or screen off and on) it checks the rules, then again when the time left runs out (a toast one
+  minute before). A spent rule whose app is on screen opens `MainActivity` with the `paused` extra; the
+  `SYSTEM_ALERT_WINDOW` permission ("display over other apps") is what lets it start an activity from the background
+  (checked on API 36). Pressing Home first would trigger the 5 s app-switch delay, so it doesn't. When the rule is
+  already paused (`until.<id>` stored), it covers the app at once. About 0.1 % CPU.
+- **Hush** (`Hush.kt`, a NotificationListenerService): the system keeps it bound, so it hosts Guard. While a rule is
+  paused, snoozes its apps' notifications until `until`, when Android posts them again. Tapping one would open the
+  app straight into the message (Instagram marks it read) before Guard can cover it. Looks only at the package, never
+  the content.
 - **Channel** `sablier/guard` (`MainActivity.kt`): `rules`, `setRules`, `status` (used, left, until, sessions per
   rule), `apps` (launchable apps; needs the MAIN/LAUNCHER `<queries>`), `icon` (96 px PNG), `access`, `openUsage`,
-  `openGuard`, `openNotifications`, `openAppInfo`, `open` (a pause screen suggestion's dialer, music app or
+  `openOverlay`, `openNotifications`, `openAppInfo`, `open` (a pause screen suggestion's dialer, music app or
 timer), `takePaused` (cold start), `home`; and `paused` from Kotlin
   (`onNewIntent`). The activity is `singleTask` so the pause screen reuses the running engine.
 - **UI**: `main.dart` (home: permission card, rule cards, refresh every 5 s while visible), `rule.dart` (editor),
@@ -79,6 +79,6 @@ timer), `takePaused` (cold start), `home`; and `paused` from Kotlin
 
 ## Limits
 
-- Turning the accessibility service off, or uninstalling, ends all limits. No device-admin lock on purpose.
+- Turning notification access off, or uninstalling, ends all limits. No device-admin lock on purpose.
 - Split screen / picture-in-picture: the usage events of the second app close the first one's session; usage may be
   undercounted there.

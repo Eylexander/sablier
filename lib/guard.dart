@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// The Kotlin side (MainActivity.kt): rules are stored there so the accessibility service (Guard.kt) can read them.
+/// The Kotlin side (MainActivity.kt): rules are stored there so Guard.kt can read them.
 const channel = MethodChannel('sablier/guard');
 
 /// The apps of a rule may be on screen [budget] minutes in any [window] minutes. The window slides: each minute
@@ -102,13 +102,13 @@ const social = [
 class Guard extends ChangeNotifier {
   List<Rule> rules = [];
   Map<String, Status> status = {};
-  bool usageAccess = false, serviceOn = false, notifications = false;
+  bool usageAccess = false, overlay = false, notifications = false;
 
   /// Launchable apps as (package, label), by label.
   List<(String, String)> apps = [];
   final _icons = <String, Future<Uint8List?>>{};
 
-  bool get ready => usageAccess && serviceOn && notifications;
+  bool get ready => usageAccess && overlay && notifications;
   String label(String pkg) => apps.firstWhere((a) => a.$1 == pkg, orElse: () => (pkg, pkg)).$2;
   Future<Uint8List?> icon(String pkg) => _icons[pkg] ??= channel.invokeMethod<Uint8List>('icon', pkg);
 
@@ -136,7 +136,7 @@ class Guard extends ChangeNotifier {
   Future<void> refresh() async {
     final access = await channel.invokeMapMethod<String, bool>('access') ?? {};
     usageAccess = access['usage'] ?? false;
-    serviceOn = access['guard'] ?? false;
+    overlay = access['overlay'] ?? false;
     notifications = access['notifications'] ?? false;
     status = usageAccess
         ? {for (final m in await channel.invokeListMethod<Map>('status') ?? []) m['id']: Status(m)}

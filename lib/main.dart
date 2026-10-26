@@ -133,7 +133,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   );
 }
 
-/// The two permissions the rules need, until both are granted.
+/// The three permissions the rules need, until all are granted.
 class Setup extends StatelessWidget {
   const Setup({super.key});
 
@@ -166,20 +166,20 @@ class Setup extends StatelessWidget {
               'openUsage',
             ),
             step(
-              guard.serviceOn,
-              Icons.accessibility_new,
-              "Service d'accessibilité « Sablier »",
-              "Pour voir quelle application s'ouvre et la mettre en pause. Il ne lit jamais l'écran.",
-              'openGuard',
+              guard.overlay,
+              Icons.layers,
+              'Affichage par-dessus les autres applications',
+              "Pour couvrir une application en pause avec l'écran de pause.",
+              'openOverlay',
             ),
             step(
               guard.notifications,
               Icons.notifications_paused,
               'Accès aux notifications',
-              "Pour mettre de côté les notifications pendant une pause : elles reviennent à la fin. Il ne lit jamais leur contenu.",
+              "Pour veiller en arrière-plan, et mettre de côté les notifications pendant une pause : elles reviennent à la fin. Il ne lit jamais leur contenu.",
               'openNotifications',
             ),
-            if (!guard.serviceOn || !guard.notifications)
+            if (!guard.notifications)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: TextButton.icon(

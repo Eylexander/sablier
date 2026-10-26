@@ -39,10 +39,10 @@ class MainActivity : FlutterActivity() {
                     "apps" -> result.success(apps())
                     "icon" -> result.success(icon(call.arguments as String))
                     "access" -> result.success(
-                        mapOf("usage" to usageAccess(), "guard" to guardOn(), "notifications" to notificationsOn()),
+                        mapOf("usage" to usageAccess(), "overlay" to Settings.canDrawOverlays(this@MainActivity), "notifications" to notificationsOn()),
                     )
                     "openUsage" -> settings(Settings.ACTION_USAGE_ACCESS_SETTINGS, result)
-                    "openGuard" -> settings(Settings.ACTION_ACCESSIBILITY_SETTINGS, result)
+                    "openOverlay" -> settings(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, result, Uri.parse("package:$packageName"))
                     "openNotifications" -> settings(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, result)
                     "openAppInfo" -> settings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, result, Uri.parse("package:$packageName"))
                     "takePaused" -> {
@@ -98,9 +98,6 @@ class MainActivity : FlutterActivity() {
 
     private fun usageAccess() = getSystemService(AppOpsManager::class.java)
         .unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), packageName) == AppOpsManager.MODE_ALLOWED
-
-    private fun guardOn() = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-        ?.contains("$packageName/") == true
 
     private fun notificationsOn() = getSystemService(NotificationManager::class.java)
         .isNotificationListenerAccessGranted(ComponentName(this, Hush::class.java))

@@ -3,21 +3,20 @@ package com.eylexander.sablier
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 
-// Snoozes the notifications of a paused rule's apps until the pause ends, when Android posts them again: tapping one
-// would open the app (and mark a message read) before Guard can cover it. It only looks at the package, never the
-// content.
+// Runs Guard (the system keeps a notification listener running), and snoozes the notifications of a paused rule's
+// apps until the pause ends, when Android posts them again: tapping one would open the app (and mark a message read)
+// before Guard can cover it. It only looks at the package, never the content.
 class Hush : NotificationListenerService() {
-    companion object {
-        var instance: Hush? = null
-    }
+    private var guard: Guard? = null
 
     override fun onListenerConnected() {
-        instance = this
         hushAll()
+        guard = Guard(this).apply { start() }
     }
 
     override fun onListenerDisconnected() {
-        instance = null
+        guard?.stop()
+        guard = null
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) = hush(sbn, System.currentTimeMillis())
