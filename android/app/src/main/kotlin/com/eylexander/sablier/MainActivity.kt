@@ -2,12 +2,14 @@ package com.eylexander.sablier
 
 import android.app.AppOpsManager
 import android.app.NotificationManager
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.net.Uri
 import android.os.Process
+import android.provider.AlarmClock
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -47,6 +49,7 @@ class MainActivity : FlutterActivity() {
                         result.success(intent.getStringExtra(PAUSED))
                         intent.removeExtra(PAUSED)
                     }
+                    "open" -> result.success(open(call.arguments as String))
                     "home" -> {
                         startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         result.success(null)
@@ -101,6 +104,24 @@ class MainActivity : FlutterActivity() {
 
     private fun notificationsOn() = getSystemService(NotificationManager::class.java)
         .isNotificationListenerAccessGranted(ComponentName(this, Hush::class.java))
+
+    /** Starts what a pause screen suggestion offers: "dial", "music" or "timer:<seconds>". False if no app can. */
+    private fun open(what: String): Boolean {
+        val intent = when {
+            what == "dial" -> Intent(Intent.ACTION_DIAL)
+            what == "music" -> Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC)
+            what.startsWith("timer:") -> Intent(AlarmClock.ACTION_SET_TIMER)
+                .putExtra(AlarmClock.EXTRA_LENGTH, what.removePrefix("timer:").toInt())
+                .putExtra(AlarmClock.EXTRA_SKIP_UI, false)
+            else -> return false
+        }
+        return try {
+            startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        } catch (e: ActivityNotFoundException) {
+            false
+        }
+    }
 
     private fun settings(action: String, result: MethodChannel.Result, data: Uri? = null) {
         startActivity(Intent(action).setData(data))

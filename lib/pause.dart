@@ -1,9 +1,29 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
 import 'guard.dart';
 import 'widgets.dart';
+
+/// Something to do instead, shown on the pause screen; tapping it shows another. Some come with a button: its label
+/// and what the channel's `open` starts (MainActivity.kt).
+const ideas = <(String, String?, String?)>[
+  ("Buvez un grand verre d'eau.", null, null),
+  ('Levez-vous et étirez-vous une minute.', null, null),
+  ('Ouvrez la fenêtre et respirez à fond, cinq fois.', null, null),
+  ('Faites dix squats ou dix pompes.', null, null),
+  ('Allez marcher, même cinq minutes.', 'Minuteur 5 min', 'timer:300'),
+  ("Lisez quelques pages d'un livre.", null, null),
+  ("Appelez quelqu'un plutôt que de lui écrire.", 'Appeler', 'dial'),
+  ('Rangez une chose qui traîne autour de vous.', null, null),
+  ('Notez ce qui vous trotte dans la tête.', null, null),
+  ('Regardez au loin par la fenêtre pour reposer vos yeux.', null, null),
+  ('Mettez un album et écoutez-le en entier.', 'Musique', 'music'),
+  ('Avancez sur la tâche que vous repoussez, cinq minutes seulement.', 'Minuteur 5 min', 'timer:300'),
+  ('Préparez-vous un thé ou un café, sans écran.', 'Minuteur 4 min', 'timer:240'),
+  ('Fermez les yeux et ne faites rien pendant deux minutes.', 'Minuteur 2 min', 'timer:120'),
+];
 
 /// Shown over an app whose time is spent (opened by Guard.kt). Leaving it, by the button or back, goes to the home
 /// screen, not back to the app.
@@ -19,6 +39,7 @@ class PausePage extends StatefulWidget {
 class _PausePageState extends State<PausePage> with SingleTickerProviderStateMixin {
   late final _flip = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
   late final Timer _clock;
+  var _idea = Random().nextInt(ideas.length);
 
   @override
   void initState() {
@@ -38,6 +59,12 @@ class _PausePageState extends State<PausePage> with SingleTickerProviderStateMix
     channel.invokeMethod('home');
   }
 
+  Future<void> _open(String what) async {
+    if (await channel.invokeMethod<bool>('open', what) != true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aucune appli pour ça.')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -46,6 +73,7 @@ class _PausePageState extends State<PausePage> with SingleTickerProviderStateMix
     final s = guard.status[rule.id];
     final left = s?.until?.difference(DateTime.now());
     final back = left == null || left.isNegative;
+    final idea = ideas[_idea];
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) => didPop ? null : _close(),
@@ -88,6 +116,27 @@ class _PausePageState extends State<PausePage> with SingleTickerProviderStateMix
                   Timeline(status: s, window: rule.window),
                 ],
                 const Spacer(),
+                Card.filled(
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.lightbulb_outline),
+                        title: Text(idea.$1),
+                        trailing: const Icon(Icons.refresh),
+                        onTap: () => setState(() => _idea = (_idea + 1) % ideas.length),
+                      ),
+                      if (idea.$2 != null)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                            child: TextButton(onPressed: () => _open(idea.$3!), child: Text(idea.$2!)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Text(
                   'Vos messages vous attendront.',
                   style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),

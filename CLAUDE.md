@@ -68,7 +68,8 @@ The enforcement is native (it must run without the Flutter UI); Flutter is only 
   it read) before Guard can cover it. Looks only at the package, never the content.
 - **Channel** `sablier/guard` (`MainActivity.kt`): `rules`, `setRules`, `status` (used, left, until, sessions per
   rule), `apps` (launchable apps; needs the MAIN/LAUNCHER `<queries>`), `icon` (96 px PNG), `access`, `openUsage`,
-  `openGuard`, `openNotifications`, `openAppInfo`, `takePaused` (cold start), `home`; and `paused` from Kotlin
+  `openGuard`, `openNotifications`, `openAppInfo`, `open` (a pause screen suggestion's dialer, music app or
+timer), `takePaused` (cold start), `home`; and `paused` from Kotlin
   (`onNewIntent`). The activity is `singleTask` so the pause screen reuses the running engine.
 - **UI**: `main.dart` (home: permission card, rule cards, refresh every 5 s while visible), `rule.dart` (editor),
   `pause.dart` (countdown; back and "Fermer" go to the launcher, not back to the app), `widgets.dart` (`Timeline`:

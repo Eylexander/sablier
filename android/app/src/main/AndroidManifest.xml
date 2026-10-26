@@ -2,6 +2,8 @@
     xmlns:tools="http://schemas.android.com/tools">
     <!-- Time spent in each app (Hourglass.kt). Granted in Settings > Usage access, not at runtime. -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions"/>
+    <!-- The pause screen's "Minuteur" buttons start a timer in the clock app (MainActivity.open) -->
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>
     <application
         android:label="${appName}"
         android:name="${applicationName}"
