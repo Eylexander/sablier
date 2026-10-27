@@ -105,6 +105,15 @@ class _RulePageState extends State<RulePage> {
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
+          SwitchListTile(
+            title: const Text('Rallonges'),
+            subtitle: Text(
+              "Depuis l'écran de pause : $extraMinutes min de plus après une attente (20 s, puis 40 s, 80 s), "
+              '$extrasPerDay fois par jour au plus. Ces minutes ne retardent pas la pause suivante.',
+            ),
+            value: r.extra,
+            onChanged: (v) => setState(() => r.extra = v),
+          ),
           title('Applications (${r.apps.length}) · temps partagé'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),

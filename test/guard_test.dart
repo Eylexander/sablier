@@ -18,8 +18,10 @@ void main() {
   });
 
   test('rule json round trip', () {
-    final r = Rule(id: '7', name: 'Réseaux', apps: {'a', 'b'}, budget: 10, window: 180, on: false);
+    final r = Rule(id: '7', name: 'Réseaux', apps: {'a', 'b'}, budget: 10, window: 180, on: false, extra: true);
     expect(Rule.fromJson(r.toJson()).toJson(), r.toJson());
+    expect(Rule.fromJson(r.toJson()..remove('extra')).extra, isFalse);
+    expect([for (var i = 0; i < extrasPerDay; i++) extraWait(i).inSeconds], [20, 40, 80]);
   });
 
   test('status from the channel', () {
@@ -28,11 +30,13 @@ void main() {
       'used': 300000,
       'left': 0,
       'until': 3660000,
+      'extras': 1,
       'sessions': [0, 120000, 3000000, 3180000],
     });
     expect(s.paused, isTrue);
+    expect(s.extras, 1);
     expect(s.sessions.length, 2);
     expect(s.sessions[1].$2, DateTime.fromMillisecondsSinceEpoch(3180000));
-    expect(Status({'now': 0, 'used': 0, 'left': 300000, 'until': 0, 'sessions': []}).paused, isFalse);
+    expect(Status({'now': 0, 'used': 0, 'left': 300000, 'until': 0, 'extras': 0, 'sessions': []}).paused, isFalse);
   });
 }

@@ -30,6 +30,18 @@ class HourglassTest {
     }
 
     @Test
+    fun grantedTimeIsNotCounted() {
+        // 5 min/h spent from 10:00 to 10:05, a grant at 10:06, then 10:06–10:09 and 10:20–10:25 on screen.
+        val s = listOf(Session(0, 5 * min), Session(6 * min, 9 * min), Session(20 * min, 25 * min))
+        val e = Hourglass.excuse(s, listOf(6 * min), 5 * min, hour)
+        assertEquals(listOf(Session(0, 5 * min), Session(22 * min, 25 * min)), e) // 3 + 2 min given
+        // Back at the same time as without the grant's 5 minutes: 11:01 for the first, then the rest.
+        assertEquals((61 * min).toDouble(), Hourglass.freeAt(e.take(1), 5 * min, hour, min, 9 * min).toDouble(), 1000.0)
+        // Nothing cut more than a window after the grant.
+        assertEquals(s, Hourglass.excuse(s, listOf(-2 * hour), 5 * min, hour))
+    }
+
+    @Test
     fun sessionsFromEvents() {
         val events = sequenceOf(
             Triple(ACTIVITY_PAUSED, "com.instagram.android", 2 * min), // was open when the window started

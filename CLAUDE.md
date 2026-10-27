@@ -54,6 +54,10 @@ The enforcement is native (it must run without the Flutter UI); Flutter is only 
 - **Pause**: once the budget is spent, `Rules.status` stores `until.<id>` = the first moment a whole minute is back
   (`freeAt`), so the app doesn't come back a few seconds at a time. While paused, the UI won't edit, delete or switch
   off the rule (self-control: loosening a rule must wait for the pause to end).
+- **Extra time** (rule `extra`, off by default, so it can't be switched on while paused): the pause screen gives
+  5 min after a wait watched on screen (leaving or screen off restarts it), 20 s then 40 s, 80 s, 3 times a day per
+  rule (`Rules.extend` checks the cap; `grants.<id>` in the prefs). Given, not lent: `Hourglass.excuse` cuts the
+  first 5 min on screen after a grant from the usage, so the next pause comes back as it was.
 - **Guard** (`Guard.kt`, a plain class that Hush runs): every second while the screen is on, reads the usage events
   since the last poll (`Hourglass.front`, a few seconds of overlap) to follow the front app. **No accessibility
   service**: with one on, Instagram scrolls noticeably slower (v1.0–1.2 had one; users uninstalled over it). On each
@@ -69,7 +73,7 @@ The enforcement is native (it must run without the Flutter UI); Flutter is only 
 - **Channel** `sablier/guard` (`MainActivity.kt`): `rules`, `setRules`, `status` (used, left, until, sessions per
   rule), `apps` (launchable apps; needs the MAIN/LAUNCHER `<queries>`), `icon` (96 px PNG), `access`, `openUsage`,
   `openOverlay`, `openNotifications`, `openAppInfo`, `open` (a pause screen suggestion's dialer, music app or
-timer), `takePaused` (cold start), `home`; and `paused` from Kotlin
+timer), `takePaused` (cold start), `home`, `extend`, `back` (to the covered app); and `paused` from Kotlin
   (`onNewIntent`). The activity is `singleTask` so the pause screen reuses the running engine.
 - **UI**: `main.dart` (home: permission card, rule cards, refresh every 5 s while visible), `rule.dart` (editor),
   `pause.dart` (countdown; back and "Fermer" go to the launcher, not back to the app), `widgets.dart` (`Timeline`:

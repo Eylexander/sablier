@@ -36,19 +36,33 @@ class PausePage extends StatefulWidget {
   State<PausePage> createState() => _PausePageState();
 }
 
-class _PausePageState extends State<PausePage> with SingleTickerProviderStateMixin {
+class _PausePageState extends State<PausePage> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final _flip = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
   late final Timer _clock;
   var _idea = Random().nextInt(ideas.length);
 
+  /// Seconds still to wait for more time, while asked.
+  int? _wait;
+
   @override
   void initState() {
     super.initState();
-    _clock = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
+    WidgetsBinding.instance.addObserver(this);
+    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() => _wait = _wait == null ? null : _wait! - 1);
+      if (_wait == 0) _extend();
+    });
+  }
+
+  // The wait has to be watched: leaving the screen, or turning it off, starts it over.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) setState(() => _wait = null);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _clock.cancel();
     _flip.dispose();
     super.dispose();
@@ -59,10 +73,41 @@ class _PausePageState extends State<PausePage> with SingleTickerProviderStateMix
     channel.invokeMethod('home');
   }
 
+  Future<void> _extend() async {
+    _wait = null;
+    if (await channel.invokeMethod<bool>('extend', widget.rule.id) != true || !mounted) return;
+    await guard.refresh();
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    channel.invokeMethod('back');
+  }
+
   Future<void> _open(String what) async {
     if (await channel.invokeMethod<bool>('open', what) != true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aucune appli pour ça.')));
     }
+  }
+
+  /// More time: a wait to sit through on this screen, longer each time, a few times a day.
+  Widget _more(ThemeData theme, Status s) {
+    final muted = theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    if (s.extras >= extrasPerDay) return Text("Plus de rallonge aujourd'hui.", style: muted);
+    final wait = extraWait(s.extras);
+    if (_wait == null) {
+      return TextButton.icon(
+        icon: const Icon(Icons.more_time),
+        label: Text('$extraMinutes min de plus (attendre ${fmt(wait)})'),
+        onPressed: () => setState(() => _wait = wait.inSeconds),
+      );
+    }
+    return Column(
+      children: [
+        LinearProgressIndicator(value: 1 - _wait! / wait.inSeconds),
+        const SizedBox(height: 8),
+        Text('Encore $_wait s, sans quitter cet écran.', style: muted),
+        TextButton(onPressed: () => setState(() => _wait = null), child: const Text('Annuler')),
+      ],
+    );
   }
 
   @override
@@ -114,6 +159,7 @@ class _PausePageState extends State<PausePage> with SingleTickerProviderStateMix
                   Text('à ${hhmm(s!.until!)}', style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
                   const SizedBox(height: 24),
                   Timeline(status: s, window: rule.window),
+                  if (rule.extra) ...[const SizedBox(height: 16), _more(theme, s)],
                 ],
                 const Spacer(),
                 Card.filled(

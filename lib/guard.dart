@@ -7,15 +7,24 @@ import 'package:flutter/services.dart';
 const channel = MethodChannel('sablier/guard');
 
 /// The apps of a rule may be on screen [budget] minutes in any [window] minutes. The window slides: each minute
-/// used comes back [window] minutes later, like sand.
+/// used comes back [window] minutes later, like sand. With [extra], the pause screen can give [extraMinutes] more,
+/// after a wait.
 class Rule {
-  Rule({required this.id, required this.name, required this.apps, this.budget = 5, this.window = 60, this.on = true});
+  Rule({
+    required this.id,
+    required this.name,
+    required this.apps,
+    this.budget = 5,
+    this.window = 60,
+    this.on = true,
+    this.extra = false,
+  });
 
   final String id;
   String name;
   Set<String> apps;
   int budget, window;
-  bool on;
+  bool on, extra;
 
   factory Rule.fromJson(Map<String, dynamic> j) => Rule(
     id: j['id'],
@@ -24,6 +33,7 @@ class Rule {
     budget: j['budget'],
     window: j['window'],
     on: j['on'],
+    extra: j['extra'] ?? false, // rules saved before v1.4
   );
 
   Map<String, dynamic> toJson() => {
@@ -33,6 +43,7 @@ class Rule {
     'budget': budget,
     'window': window,
     'on': on,
+    'extra': extra,
   };
 
   String get summary => '$budget min ${windowLabel(window, per: true)}';
@@ -45,6 +56,7 @@ class Status {
       used = Duration(milliseconds: m['used']),
       left = Duration(milliseconds: m['left']),
       until = m['until'] == 0 ? null : DateTime.fromMillisecondsSinceEpoch(m['until']),
+      extras = m['extras'],
       sessions = [
         for (var i = 0; i < (m['sessions'] as List).length; i += 2)
           (
@@ -59,11 +71,20 @@ class Status {
   /// End of the pause, while the budget is spent.
   final DateTime? until;
 
+  /// Times the pause screen gave more today.
+  final int extras;
+
   /// When the rule's apps were on screen within the window.
   final List<(DateTime, DateTime)> sessions;
 
   bool get paused => until != null;
 }
+
+/// What the pause screen gives (Rules.EXTRA, EXTRAS in Hourglass.kt), after a wait that doubles each time: 20 s, 40 s,
+/// 80 s.
+const extraMinutes = 5, extrasPerDay = 3;
+
+Duration extraWait(int extras) => Duration(seconds: 20 << extras);
 
 /// Window choices, in minutes.
 const windows = [30, 60, 180, 1440];

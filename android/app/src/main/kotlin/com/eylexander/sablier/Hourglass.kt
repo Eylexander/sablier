@@ -3,10 +3,17 @@ package com.eylexander.sablier
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.text.format.DateUtils
 import org.json.JSONArray
 
-/** A rule: its apps may be on screen [budget] ms in any [window] ms (a sliding window, like sand coming back). */
-data class Rule(val id: String, val name: String, val apps: Set<String>, val budget: Long, val window: Long, val on: Boolean)
+/**
+ * A rule: its apps may be on screen [budget] ms in any [window] ms (a sliding window, like sand coming back). With
+ * [extra], the pause screen can give [Rules.EXTRA] more, after a wait.
+ */
+data class Rule(
+    val id: String, val name: String, val apps: Set<String>, val budget: Long, val window: Long, val on: Boolean,
+    val extra: Boolean,
+)
 
 /** A stretch of time one of a rule's apps was on screen, in epoch ms. */
 data class Session(val start: Long, val end: Long)
@@ -35,6 +42,21 @@ object Hourglass {
             if (ok(mid)) hi = mid else lo = mid
         }
         return hi
+    }
+
+    /**
+     * [sessions] without the first [extra] ms on screen after each grant (and within [window] of it): time earned by
+     * waiting on the pause screen, given rather than lent, so it doesn't push the next pause back.
+     */
+    fun excuse(sessions: List<Session>, grants: List<Long>, extra: Long, window: Long) = grants.fold(sessions) { all, g ->
+        var left = extra
+        all.flatMap { s ->
+            val a = maxOf(s.start, g)
+            val cut = minOf(left, maxOf(0, minOf(s.end, g + window) - a))
+            left -= cut
+            if (cut == 0L) listOf(s)
+            else listOfNotNull(Session(s.start, a).takeIf { a > s.start }, Session(a + cut, s.end).takeIf { s.end > a + cut })
+        }
     }
 
     /**
@@ -87,6 +109,10 @@ object Hourglass {
 
 /** Rules (written by the Flutter side as JSON) and their live status from Android's usage stats. */
 object Rules {
+    const val EXTRA = 5 * 60_000L
+    const val EXTRAS = 3 // a day, per rule
+    private const val DAY = 86_400_000L
+
     fun prefs(c: Context) = c.getSharedPreferences("sablier", Context.MODE_PRIVATE)
 
     fun load(c: Context): List<Rule> {
@@ -96,24 +122,46 @@ object Rules {
             val apps = r.getJSONArray("apps")
             Rule(
                 r.getString("id"), r.getString("name"), (0 until apps.length()).map(apps::getString).toSet(),
-                r.getLong("budget") * 60_000, r.getLong("window") * 60_000, r.getBoolean("on"),
+                r.getLong("budget") * 60_000, r.getLong("window") * 60_000, r.getBoolean("on"), r.optBoolean("extra"),
             )
         }
     }
 
     fun status(c: Context, rule: Rule, now: Long): Status {
         val from = now - rule.window
-        val sessions = Hourglass.sessions(events(c, from, now), rule.apps, from, now)
+        // A grant's time is cut from the usage up to a window after it, so it needs the events from then.
+        val grants = grants(c, rule.id).filter { it > from - rule.window }
+        val start = minOf(from, grants.minOrNull() ?: from)
+        val raw = Hourglass.sessions(events(c, start, now), rule.apps, start, now)
+        val sessions = Hourglass.excuse(raw, grants, EXTRA, rule.window)
         val used = Hourglass.used(sessions, from, now)
+        // What's left of the last grant: grants are only given while paused, so the time cut since it is its own.
+        val bonus = grants.lastOrNull()?.takeIf { it > from }
+            ?.let { maxOf(0, EXTRA - Hourglass.used(raw, it, now) + Hourglass.used(sessions, it, now)) } ?: 0
         val key = "until.${rule.id}"
         var until = prefs(c).getLong(key, 0)
         if (until <= now) {
             // Once the budget is spent, the pause lasts until a full minute is back (not a few seconds at a time).
-            until = if (used >= rule.budget) Hourglass.freeAt(sessions, rule.budget, rule.window, minOf(60_000L, rule.budget), now) else 0
+            until = if (used >= rule.budget && bonus == 0L) Hourglass.freeAt(sessions, rule.budget, rule.window, minOf(60_000L, rule.budget), now) else 0
             prefs(c).edit().putLong(key, until).apply()
         }
-        val open = sessions.lastOrNull()?.end == now
-        return Status(used, if (until > 0) 0 else maxOf(0, rule.budget - used), open, until, sessions)
+        val open = raw.lastOrNull()?.end == now
+        return Status(used, if (until > 0) 0 else maxOf(0, rule.budget - used) + bonus, open, until, sessions)
+    }
+
+    /** When the pause screen gave a rule more time (epoch ms, the last two days). */
+    fun grants(c: Context, id: String) =
+        prefs(c).getString("grants.$id", null)?.split(',')?.map(String::toLong) ?: emptyList()
+
+    fun extrasToday(c: Context, id: String) = grants(c, id).count(DateUtils::isToday)
+
+    /** Ends the pause of a rule that allows it with [EXTRA] more, [EXTRAS] times a day at most (after the wait). */
+    fun extend(c: Context, id: String, now: Long): Boolean {
+        val rule = load(c).find { it.id == id } ?: return false
+        if (!rule.extra || prefs(c).getLong("until.$id", 0) <= now || extrasToday(c, id) >= EXTRAS) return false
+        val grants = grants(c, id).filter { it > now - 2 * DAY } + now
+        prefs(c).edit().putLong("until.$id", 0).putString("grants.$id", grants.joinToString(",")).apply()
+        return true
     }
 
     /** The rules holding [pkg] that are paused at [now], with the end of their pause (as [status] stored it). */

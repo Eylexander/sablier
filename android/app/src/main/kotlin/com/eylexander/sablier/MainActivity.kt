@@ -50,6 +50,8 @@ class MainActivity : FlutterActivity() {
                         intent.removeExtra(PAUSED)
                     }
                     "open" -> result.success(open(call.arguments as String))
+                    "extend" -> result.success(Rules.extend(this@MainActivity, call.arguments as String, System.currentTimeMillis()))
+                    "back" -> result.success(moveTaskToBack(true)) // to the app the pause screen covered
                     "home" -> {
                         startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         result.success(null)
@@ -71,6 +73,7 @@ class MainActivity : FlutterActivity() {
             val s = Rules.status(this, rule, now)
             mapOf(
                 "id" to rule.id, "now" to now, "used" to s.used, "left" to s.left, "until" to s.until,
+                "extras" to Rules.extrasToday(this, rule.id),
                 "sessions" to s.sessions.flatMap { listOf(it.start, it.end) },
             )
         }
