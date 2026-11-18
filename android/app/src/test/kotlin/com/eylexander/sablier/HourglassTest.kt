@@ -57,6 +57,26 @@ class HourglassTest {
     }
 
     @Test
+    fun anActivityPausedAfterTheNextOneResumedKeepsTheSession() {
+        val events = sequenceOf(
+            Triple(ACTIVITY_RESUMED, "com.instagram.android", 10 * min), // feed
+            Triple(ACTIVITY_RESUMED, "com.instagram.android", 11 * min), // reels, logged before the feed's pause
+            Triple(ACTIVITY_PAUSED, "com.instagram.android", 11 * min),
+            Triple(ACTIVITY_PAUSED, "com.instagram.android", 15 * min), // left
+        )
+        assertEquals(listOf(Session(10 * min, 15 * min)), Hourglass.sessions(events, insta, 0, 20 * min))
+    }
+
+    @Test
+    fun frontSeesEventsSharingAMillisecond() {
+        val events = sequenceOf(
+            Triple(ACTIVITY_PAUSED, "com.android.launcher", 3000L),
+            Triple(ACTIVITY_RESUMED, "com.instagram.android", 3000L),
+        )
+        assertEquals("com.instagram.android", Hourglass.front(events, "com.android.launcher", 2000).pkg)
+    }
+
+    @Test
     fun frontFollowsTheEvents() {
         val events = sequenceOf(
             Triple(ACTIVITY_RESUMED, "com.whatsapp", 1000L), // seen by the last poll

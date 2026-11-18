@@ -66,17 +66,24 @@ object Hourglass {
     fun sessions(events: Sequence<Triple<Int, String, Long>>, apps: Set<String>, from: Long, now: Long): List<Session> {
         val out = mutableListOf<Session>()
         var start: Long? = null
+        // The apps' activities on screen: switching activities (Instagram's reels) can log the new one's resume
+        // before the old one's pause, which would end the session while the app is still in front.
+        var resumed = 0
         var seen = false
         fun close(t: Long) {
             start?.let { out += Session(it, t) }
             start = null
+            resumed = 0
         }
         for ((type, pkg, t) in events) {
             when (type) {
-                UsageEvents.Event.ACTIVITY_RESUMED -> if (pkg in apps) { if (start == null) start = t } else close(t)
+                UsageEvents.Event.ACTIVITY_RESUMED -> if (pkg in apps) {
+                    resumed++
+                    if (start == null) start = t
+                } else close(t)
                 UsageEvents.Event.ACTIVITY_PAUSED -> if (pkg in apps) {
                     if (start == null && !seen) start = from
-                    close(t)
+                    if (--resumed <= 0) close(t)
                 }
                 UsageEvents.Event.SCREEN_NON_INTERACTIVE -> close(t)
                 else -> continue
@@ -96,7 +103,7 @@ object Hourglass {
         var last = seen
         var changed = false
         for ((type, p, t) in events) {
-            if (t <= last) continue // already handled (polls overlap)
+            if (t <= seen) continue // already handled (polls overlap); not `last`: events can share a millisecond
             last = t
             when (type) {
                 UsageEvents.Event.ACTIVITY_RESUMED -> if (p != pkg) { pkg = p; changed = true }
